@@ -129,6 +129,7 @@ gaphor = "gaphor.main:main"
 "xmi_export" = "gaphor.plugins.xmiexport:XMIExport"
 "auto_layout" = "gaphor.plugins.autolayout:AutoLayoutService"
 "align" = "gaphor.plugins.align:AlignService"
+"constraint" = "gaphor.plugins.constraint:ConstraintService"
 
 [tool.poetry.plugins."gaphor.modelinglanguages"]
 "Core" = "gaphor.core.modeling.modelinglanguage:CoreModelingLanguage"

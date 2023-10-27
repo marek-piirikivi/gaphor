@@ -103,6 +103,22 @@
           <object class="GtkBox">
             <child>
               <object class="GtkLabel">
+                <property name="label" translatable="yes">Show Constraints</property>
+                <property name="halign">start</property>
+                <property name="hexpand">yes</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkSwitch" id="show-constraints">
+                <signal name="notify::active" handler="show-constraints-changed" swapped="no"/>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkBox">
+            <child>
+              <object class="GtkLabel">
                 <property name="label" translatable="yes">Show Parts</property>
                 <property name="halign">start</property>
                 <property name="hexpand">yes</property>
@@ -197,6 +213,33 @@
   </object>
 
 
+  <object class="GtkExpander" id="constraintblock-editor">
+    <child>
+      <object class="GtkBox">
+        <property name="orientation">vertical</property>
+        <child>
+          <object class="GtkLabel">
+            <property name="label" translatable="yes">Expression</property>
+            <property name="xalign">0</property>
+            <style>
+              <class name="title" />
+            </style>
+          </object>
+        </child>
+        <child>
+          <object class="GtkEntry" id="expression-entry">
+            <property name="focusable">1</property>
+            <signal name="changed" handler="expression-changed"/>
+          </object>
+        </child>
+      </object>
+    </child>
+    <style>
+      <class name="propertypage"/>
+    </style>
+  </object>
+
+
   <object class="GtkBox" id="property-aggregation-editor">
     <property name="orientation">vertical</property>
     <child>
@@ -220,6 +263,21 @@
           </object>
         </property>
         <signal name="notify::selected" handler="aggregation-changed" swapped="no" />
+      </object>
+    </child>
+    <child>
+      <object class="GtkLabel" id="defaultvalue">
+        <property name="label" translatable="yes">Default value</property>
+        <property name="xalign">0</property>
+        <style>
+          <class name="title"/>
+        </style>
+      </object>
+    </child>
+    <child>
+      <object class="GtkEntry" id="default-value-entry">
+        <property name="focusable">1</property>
+        <signal name="changed" handler="default-value-changed" />
       </object>
     </child>
     <style>

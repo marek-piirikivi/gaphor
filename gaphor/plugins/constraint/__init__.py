@@ -1,0 +1,1 @@
+from gaphor.plugins.constraint.constraintservice import ConstraintService

@@ -96,11 +96,15 @@ class CompartmentPage(PropertyPageBase):
         builder = new_builder(
             "compartment-editor",
             signals={
+                "show-constraints-changed": (self._on_show_constraints_change,),
                 "show-parts-changed": (self._on_show_parts_change,),
                 "show-references-changed": (self._on_show_references_change,),
                 "show-values-changed": (self._on_show_values_change,),
             },
         )
+
+        show_constraints = builder.get_object("show-constraints")
+        show_constraints.set_active(self.item.show_constraints)
 
         show_parts = builder.get_object("show-parts")
         show_parts.set_active(self.item.show_parts)
@@ -112,6 +116,10 @@ class CompartmentPage(PropertyPageBase):
         show_values.set_active(self.item.show_values)
 
         return builder.get_object("compartment-editor")
+
+    @transactional
+    def _on_show_constraints_change(self, button, gparam):
+        self.item.show_constraints = button.get_active()
 
     @transactional
     def _on_show_parts_change(self, button, gparam):
@@ -157,6 +165,36 @@ class InterfaceBlockPage(PropertyPageBase):
         self.item.show_values = button.get_active()
 
 
+@PropertyPages.register(sysml.ConstraintBlock)
+class ConstraintBlockPage(PropertyPageBase):
+    """An editor for ConstraintBlock elements."""
+
+    order = 30
+
+    def __init__(self, subject: sysml.ConstraintBlock):
+        super().__init__()
+        self.subject = subject
+
+    def construct(self):
+        builder = new_builder(
+            "constraintblock-editor",
+            signals={
+                "expression-changed": (self._on_expression_change,),
+            },
+        )
+
+        expression_entry = builder.get_object("expression-entry")
+        expression_entry.set_text(self.subject.expression or "")
+
+        return builder.get_object("constraintblock-editor")
+
+    @transactional
+    def _on_expression_change(self, entry):
+        expression = entry.get_text().strip()
+        self.subject.expression = expression
+        # TODO: parse the expression. If it is valid, ensure all the parameters
+
+
 @PropertyPages.register(sysml.Property)
 class PropertyAggregationPropertyPage(PropertyPageBase):
     """An editor for Properties (a.k.a.
@@ -180,17 +218,26 @@ class PropertyAggregationPropertyPage(PropertyPageBase):
             "property-aggregation-editor",
             signals={
                 "aggregation-changed": (self._on_aggregation_change,),
+                "default-value-changed": (self._on_default_value_change,),
             },
         )
 
         aggregation = builder.get_object("aggregation")
         aggregation.set_selected(self.AGGREGATION.index(self.subject.aggregation))
 
+        default_value = builder.get_object("default-value-entry")
+        default_value.set_text(self.subject and self.subject.defaultValue or "")
+
         return builder.get_object("property-aggregation-editor")
 
     @transactional
     def _on_aggregation_change(self, combo, _pspec):
         self.subject.aggregation = self.AGGREGATION[combo.get_selected()]
+
+    @transactional
+    def _on_default_value_change(self, entry):
+        if self.subject.defaultValue != entry.get_text():
+            self.subject.defaultValue = entry.get_text()
 
 
 @PropertyPages.register(UML.Association)

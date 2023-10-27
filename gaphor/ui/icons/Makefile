@@ -16,6 +16,7 @@ ICONS=diagram \
 	primitive-type \
 	block \
 	interface-block \
+	constraint-block \
 	value-specification-action \
 	call-behavior-action \
 	value-type \

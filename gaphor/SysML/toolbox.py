@@ -25,7 +25,7 @@ from gaphor.UML import diagramitems as uml_items
 from gaphor.UML.actions.actionstoolbox import actions
 from gaphor.UML.interactions.interactionstoolbox import interactions
 from gaphor.UML.states.statestoolbox import states
-from gaphor.UML.toolboxconfig import named_element_config
+from gaphor.UML.toolboxconfig import named_element_config, namespace_config
 from gaphor.UML.usecases.usecasetoolbox import use_cases
 from gaphor.SysML.diagramtype import SysMLDiagramType, DiagramDefault
 from gaphor.UML.uml import (
@@ -68,10 +68,36 @@ internal_blocks = ToolSection(
 )
 
 
+constraint_blocks = ToolSection(
+    gettext("Constraint Blocks"),
+    (
+        ToolDef(
+            "toolbox-constraintblock",
+            gettext("ConstraintBlock"),
+            "gaphor-constraint-block-symbolic",
+            None,
+            new_item_factory(
+                sysml_items.ConstraintBlockItem,
+                ConstraintBlock,
+                config_func=namespace_config,
+            ),
+        ),
+        ToolDef(
+            "toolbox-connector",
+            gettext("Connector"),
+            "gaphor-connector-symbolic",
+            "<Shift>C",
+            new_item_factory(uml_items.ConnectorItem),
+        ),
+    ),
+)
+
+
 sysml_toolbox_actions: ToolboxDefinition = (
     general_tools,
     blocks,
     internal_blocks,
+    constraint_blocks,
     requirements,
     actions,
     interactions,
@@ -79,9 +105,9 @@ sysml_toolbox_actions: ToolboxDefinition = (
     use_cases,
 )
 
+
 root = type(None)
 
-# Not implemented: Parameter Diagram
 sysml_diagram_types: DiagramTypes = (
     SysMLDiagramType(
         "bdd",
@@ -94,6 +120,19 @@ sysml_diagram_types: DiagramTypes = (
         "ibd",
         i18nize("New Internal Block Diagram"),
         (internal_blocks,),
+        (
+            Block,
+            ConstraintBlock,
+        ),
+        (
+            DiagramDefault(Package, Block, i18nize("New Block")),
+            DiagramDefault(root, Block, i18nize("New Block")),
+        ),
+    ),
+    SysMLDiagramType(
+        "par",
+        i18nize("New Parametric Diagram"),
+        (blocks),
         (
             Block,
             ConstraintBlock,

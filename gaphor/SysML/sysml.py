@@ -224,7 +224,8 @@ class ElementGroup(Comment):
 
 
 class ConstraintBlock(Block):
-    pass
+    expression: _attribute[str] = _attribute("expression", str)
+    parameter: relation_many[ConstraintParameter]
 
 
 from gaphor.UML.uml import Parameter
@@ -298,6 +299,10 @@ from gaphor.UML.uml import Class
 class SysMLDiagram(Diagram):
     pass
 
+from gaphor.UML.uml import ConnectableElement
+class ConstraintParameter(ConnectableElement):
+    type: relation_one[ValueType]
+    name: _attribute[str] = _attribute("name", str)
 
 
 # 23: override AbstractRequirement.derived: derived[AbstractRequirement]
@@ -367,6 +372,8 @@ Viewpoint.stakeholder = association("stakeholder", Stakeholder, composite=True)
 Stakeholder.concernList = association("concernList", Comment, composite=True)
 ElementGroup.member = derivedunion("member", Element)
 ElementGroup.orderedMember = association("orderedMember", Element, composite=True)
+ConstraintBlock.parameter = association("parameter", ConstraintParameter, composite=True)
 Rate.rate = association("rate", InstanceSpecification, composite=True)
 ItemFlow.itemProperty = association("itemProperty", Property, upper=1, composite=True, opposite="itemFlow")
 Element.ownedElement.add(ItemFlow.itemProperty)  # type: ignore[attr-defined]
+ConstraintParameter.type = association("type", ValueType, upper=1, composite=True)

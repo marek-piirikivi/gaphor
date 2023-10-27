@@ -5,9 +5,10 @@ from gaphas.connector import Handle, Port
 from gaphor import UML
 from gaphor.diagram.connectors import Connector, RelationshipConnect
 from gaphor.SysML import sysml
+from gaphor.UML import uml
 from gaphor.SysML.blocks.block import BlockItem
 from gaphor.SysML.blocks.interfaceblock import InterfaceBlockItem
-from gaphor.SysML.blocks.property import PropertyItem
+from gaphor.SysML.blocks.property import PropertyItem, ConstraintParameterItem
 from gaphor.SysML.blocks.proxyport import ProxyPortItem
 from gaphor.UML.deployments import ConnectorItem
 
@@ -94,3 +95,49 @@ class PropertyConnectorConnector(RelationshipConnect):
             connector = UML.recipes.create_connector(c1.subject, c2.subject)
             line.subject = connector
             connector.structuredClassifier = c1.subject.owner or c2.subject.owner
+
+
+@Connector.register(ConstraintParameterItem, ConnectorItem)
+class ConstraintParameterConnectorConnector(RelationshipConnect):
+    def allow(self, handle, port):
+        # TODO: check that only allow the connection ValueType typed property ←→ Constraintproperty ConstraintParameter
+
+        return super().allow(handle, port)
+
+    def connect_subject(self, handle):
+        if self.line.subject:
+            return
+
+        c1 = self.get_connected(self.line.head)
+        c2 = self.get_connected(self.line.tail)
+
+        constraint_parameter_item = (
+            c1 if isinstance(c1, ConstraintParameterItem) else c2
+        )
+        assert isinstance(constraint_parameter_item, ConstraintParameterItem)
+        constraint_parameter = constraint_parameter_item.subject
+        constraint_property = constraint_parameter_item.parent.subject
+
+        connector_end = c2 if isinstance(c1, ConstraintParameterItem) else c1
+
+        assert isinstance(connector_end, uml.ConnectorEnd)
+
+        value_property = connector_end.subject
+        assert isinstance(value_property, uml.Property)
+
+        assert isinstance(constraint_property.type, sysml.ConstraintBlock)
+        assert isinstance(value_property.type, sysml.ValueType)
+
+        model = value_property.model
+
+        end_value = model.create(uml.ConnectorEnd)
+        end_value.role = value_property
+
+        end_parameter = model.create(uml.ConnectorEnd)
+        end_parameter.role = constraint_parameter
+        end_parameter.partWithPort = constraint_property
+
+        connector = model.create(uml.Connector)
+        connector.end = end_value
+        connector.end = end_parameter
+        self.line.subject = connector
