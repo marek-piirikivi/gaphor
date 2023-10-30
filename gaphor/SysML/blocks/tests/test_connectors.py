@@ -6,7 +6,8 @@ from gaphor.diagram.tests.fixtures import allow, connect, disconnect
 from gaphor.SysML import sysml
 from gaphor.SysML.blocks.block import BlockItem
 from gaphor.SysML.blocks.connectors import BlockProperyProxyPortConnector
-from gaphor.SysML.blocks.property import PropertyItem
+from gaphor.SysML.blocks.constraintblock import ConstraintBlockItem
+from gaphor.SysML.blocks.property import ConstraintParameterItem, PropertyItem
 from gaphor.SysML.blocks.proxyport import ProxyPortItem
 from gaphor.UML.deployments import ConnectorItem
 
@@ -143,3 +144,187 @@ def test_disconnect_connector_from_proxy_port(
     assert element_factory.lselect(UML.ConnectorEnd) == []
     assert head_proxy_port_item.subject in element_factory.select(UML.Port)
     assert tail_proxy_port_item.subject in element_factory.select(UML.Port)
+
+
+@pytest.fixture
+def value_item(element_factory, diagram):
+    value_type = element_factory.create(sysml.ValueType)
+    value_property = element_factory.create(UML.Property)
+    value_property.type = value_type
+    return diagram.create(PropertyItem, subject=value_property)
+
+
+@pytest.fixture
+def part_constraint_parameter_item(element_factory, diagram):
+    constraint = element_factory.create(sysml.ConstraintBlock)
+    parameter = element_factory.create(sysml.ConstraintParameter)
+    constraint.parameter = parameter
+
+    constraint_property = element_factory.create(UML.Property)
+    constraint_property.type = constraint
+
+    property_item = diagram.create(PropertyItem, subject=constraint_property)
+    return diagram.create(
+        ConstraintParameterItem, subject=parameter, parent=property_item
+    )
+
+
+@pytest.fixture
+def block_constraint_parameter_item(element_factory, diagram):
+    constraint = element_factory.create(sysml.ConstraintBlock)
+    parameter = element_factory.create(sysml.ConstraintParameter)
+    constraint.parameter = parameter
+
+    block_item = diagram.create(ConstraintBlockItem, subject=constraint)
+    return diagram.create(ConstraintParameterItem, subject=parameter, parent=block_item)
+
+
+@pytest.fixture
+def other_part_constraint_parameter_item(part_constraint_parameter_item):
+    return part_constraint_parameter_item
+
+
+def test_constraint_parameter_binding_from_block_parameter_to_part_parameter(
+    block_constraint_parameter_item,
+    part_constraint_parameter_item,
+    connector_item,
+    element_factory,
+):
+    block_constraint_parameter_item.parent.subject.ownedAttribute = (
+        part_constraint_parameter_item.parent.subject
+    )
+
+    connect(
+        connector_item, connector_item.handles()[0], block_constraint_parameter_item
+    )
+    connect(connector_item, connector_item.handles()[1], part_constraint_parameter_item)
+
+    assert connector_item.subject.end[0].role == block_constraint_parameter_item.subject
+    assert not connector_item.subject.end[0].partWithPort
+    assert connector_item.subject.end[1].role == part_constraint_parameter_item.subject
+    assert (
+        connector_item.subject.end[1].partWithPort
+        == part_constraint_parameter_item.parent.subject
+    )
+
+    disconnect(connector_item, connector_item.handles()[0])
+
+    assert not connector_item.subject
+    assert element_factory.lselect(UML.Connector) == []
+    assert element_factory.lselect(UML.ConnectorEnd) == []
+    assert part_constraint_parameter_item.subject
+    assert block_constraint_parameter_item.subject
+
+
+def test_constraint_parameter_binding_from_part_parameter_to_block_parameter(
+    part_constraint_parameter_item,
+    block_constraint_parameter_item,
+    connector_item,
+    element_factory,
+):
+    block_constraint_parameter_item.parent.subject.ownedAttribute = (
+        part_constraint_parameter_item.parent.subject
+    )
+
+    connect(connector_item, connector_item.handles()[0], part_constraint_parameter_item)
+    connect(
+        connector_item, connector_item.handles()[1], block_constraint_parameter_item
+    )
+
+    assert connector_item.subject.end[0].role == part_constraint_parameter_item.subject
+    assert (
+        connector_item.subject.end[0].partWithPort
+        == part_constraint_parameter_item.parent.subject
+    )
+    assert connector_item.subject.end[1].role == block_constraint_parameter_item.subject
+    assert not connector_item.subject.end[1].partWithPort
+
+    disconnect(connector_item, connector_item.handles()[0])
+
+    assert not connector_item.subject
+    assert element_factory.lselect(UML.Connector) == []
+    assert element_factory.lselect(UML.ConnectorEnd) == []
+    assert part_constraint_parameter_item.subject
+    assert block_constraint_parameter_item.subject
+
+
+def test_constraint_parameter_binding_from_value_to_parameter(
+    value_item, part_constraint_parameter_item, connector_item, element_factory
+):
+    connect(connector_item, connector_item.handles()[0], value_item)
+    connect(connector_item, connector_item.handles()[1], part_constraint_parameter_item)
+
+    assert connector_item.subject.end[0].role == value_item.subject
+    assert not connector_item.subject.end[0].partWithPort
+    assert connector_item.subject.end[1].role == part_constraint_parameter_item.subject
+    assert (
+        connector_item.subject.end[1].partWithPort
+        == part_constraint_parameter_item.parent.subject
+    )
+
+    disconnect(connector_item, connector_item.handles()[0])
+
+    assert not connector_item.subject
+    assert element_factory.lselect(UML.Connector) == []
+    assert element_factory.lselect(UML.ConnectorEnd) == []
+    assert value_item.subject
+    assert part_constraint_parameter_item.subject
+
+
+def test_constraint_parameter_binding_from_parameter_to_value(
+    value_item, part_constraint_parameter_item, connector_item, element_factory
+):
+    connect(connector_item, connector_item.handles()[0], part_constraint_parameter_item)
+    connect(connector_item, connector_item.handles()[1], value_item)
+
+    assert connector_item.subject.end[0].role == part_constraint_parameter_item.subject
+    assert (
+        connector_item.subject.end[0].partWithPort
+        == part_constraint_parameter_item.parent.subject
+    )
+    assert connector_item.subject.end[1].role == value_item.subject
+    assert not connector_item.subject.end[1].partWithPort
+
+    disconnect(connector_item, connector_item.handles()[0])
+
+    assert not connector_item.subject
+    assert element_factory.lselect(UML.Connector) == []
+    assert element_factory.lselect(UML.ConnectorEnd) == []
+    assert value_item.subject
+    assert part_constraint_parameter_item.subject
+
+
+def test_constraint_parameter_binding_from_parameter_to_parameter(
+    part_constraint_parameter_item,
+    other_part_constraint_parameter_item,
+    connector_item,
+    element_factory,
+):
+    connect(connector_item, connector_item.handles()[0], part_constraint_parameter_item)
+    connect(
+        connector_item,
+        connector_item.handles()[1],
+        other_part_constraint_parameter_item,
+    )
+
+    assert connector_item.subject.end[0].role == part_constraint_parameter_item.subject
+    assert (
+        connector_item.subject.end[0].partWithPort
+        == part_constraint_parameter_item.parent.subject
+    )
+    assert (
+        connector_item.subject.end[1].role
+        == other_part_constraint_parameter_item.subject
+    )
+    assert (
+        connector_item.subject.end[1].partWithPort
+        == other_part_constraint_parameter_item.parent.subject
+    )
+
+    disconnect(connector_item, connector_item.handles()[0])
+
+    assert not connector_item.subject
+    assert element_factory.lselect(UML.Connector) == []
+    assert element_factory.lselect(UML.ConnectorEnd) == []
+    assert part_constraint_parameter_item.subject
+    assert other_part_constraint_parameter_item.subject

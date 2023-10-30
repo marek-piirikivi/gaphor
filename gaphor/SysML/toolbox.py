@@ -166,6 +166,16 @@ sysml_diagram_types: DiagramTypes = (
         ),
         (DiagramDefault(root, Package, i18nize("New Package")),),
     ),
+    SysMLDiagramType(
+        "par",
+        i18nize("New Parametric Diagram"),
+        (internal_blocks,),
+        (
+            Block,
+            ConstraintBlock,
+        ),
+        (DiagramDefault(Package, Block, i18nize("New Block")),),
+    ),
 )
 
 sysml_element_types = (

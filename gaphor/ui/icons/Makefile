@@ -16,6 +16,7 @@ ICONS=diagram \
 	primitive-type \
 	block \
 	interface-block \
+	constraint-block \
 	value-specification-action \
 	call-behavior-action \
 	value-type \
@@ -128,7 +129,8 @@ ICONS=diagram \
 	unsafe-control-action \
 	relevant-to \
 	control-action \
-	control-structure
+	control-structure \
+	constraint-parameter
 
 
 ICON_THEME=hicolor/scalable/actions

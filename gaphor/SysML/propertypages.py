@@ -1,12 +1,17 @@
 from __future__ import annotations
 
+from gi.repository import Gtk
+
 from gaphor import UML
 from gaphor.core import transactional
+from gaphor.core.format import format, parse
 from gaphor.diagram.propertypages import (
+    EditableTreeModel,
     PropertyPageBase,
     PropertyPages,
     handler_blocking,
     new_resource_builder,
+    on_text_cell_edited,
     unsubscribe_all_on_destroy,
 )
 from gaphor.SysML import sysml
@@ -14,7 +19,7 @@ from gaphor.SysML.blocks.block import BlockItem
 from gaphor.SysML.blocks.interfaceblock import InterfaceBlockItem
 from gaphor.SysML.blocks.property import PropertyItem
 from gaphor.SysML.blocks.proxyport import ProxyPortItem
-from gaphor.UML.classes.classespropertypages import OperationsPage
+from gaphor.UML.classes.classespropertypages import OperationsPage, on_keypress_event
 from gaphor.UML.propertypages import TypedElementPropertyPage, list_of_classifiers
 
 new_builder = new_resource_builder("gaphor.SysML")
@@ -95,11 +100,15 @@ class CompartmentPage(PropertyPageBase):
         builder = new_builder(
             "compartment-editor",
             signals={
+                "show-constraints-changed": (self._on_show_constraints_change,),
                 "show-parts-changed": (self._on_show_parts_change,),
                 "show-references-changed": (self._on_show_references_change,),
                 "show-values-changed": (self._on_show_values_change,),
             },
         )
+
+        show_constraints = builder.get_object("show-constraints")
+        show_constraints.set_active(self.item.show_constraints)
 
         show_parts = builder.get_object("show-parts")
         show_parts.set_active(self.item.show_parts)
@@ -111,6 +120,10 @@ class CompartmentPage(PropertyPageBase):
         show_values.set_active(self.item.show_values)
 
         return builder.get_object("compartment-editor")
+
+    @transactional
+    def _on_show_constraints_change(self, button, gparam):
+        self.item.show_constraints = button.get_active()
 
     @transactional
     def _on_show_parts_change(self, button, gparam):
@@ -154,6 +167,154 @@ class InterfaceBlockPage(PropertyPageBase):
     @transactional
     def _on_show_values_change(self, button, gparam):
         self.item.show_values = button.get_active()
+
+
+class ConstraintParameters(EditableTreeModel):
+    """GTK tree model to edit class attributes."""
+
+    def __init__(self, subject):
+        super().__init__(subject, cols=(str, object))
+
+    def find_type(self, name):
+        type = next(
+            (
+                value_type
+                for value_type in self._item.model.select(sysml.ValueType)
+                if value_type.name == name
+            ),
+            None,
+        )
+        if not type:
+            type = self._item.model.create(sysml.ValueType)
+            # TODO: set parent as the closest package to the subject
+            type.name = name
+
+        return type
+
+    def get_rows(self):
+        for parameter in self._item.parameter:
+            yield [format(parameter), parameter]
+
+    def create_object(self):
+        model = self._item.model
+        parameter = model.create(sysml.ConstraintParameter)
+        self._item.parameter.append(parameter)
+        return parameter
+
+    @transactional
+    def set_object_value(self, row, col, value):
+        parameter = row[-1]
+        if col == 0:
+            parse(parameter, value)
+            row[0] = format(parameter)
+        elif col == 1:
+            row[0] = format(parameter)
+
+    def swap_objects(self, o1, o2):
+        return self._item.parameter.swap(o1, o2)
+
+    def sync_model(self, new_order):
+        self._item.parameter.order(
+            lambda key: new_order.index(key) if key in new_order else -1
+        )
+
+
+class ConstraintExpressions(EditableTreeModel):
+    """GTK tree model to edit class attributes."""
+
+    def __init__(self, subject):
+        super().__init__(subject, cols=(str, object))
+
+    def get_rows(self):
+        for expression in self._item.expression:
+            yield [expression.text, expression]
+
+    def create_object(self):
+        model = self._item.model
+        expression = model.create(sysml.ConstraintExpression)
+        self._item.expression.append(expression)
+        return expression
+
+    @transactional
+    def set_object_value(self, row, col, value):
+        expression = row[-1]
+        if col == 0:
+            expression.text = value
+            row[0] = expression.text
+        elif col == 1:
+            row[0] = expression.text
+
+    def swap_objects(self, o1, o2):
+        return self._item.parameter.swap(o1, o2)
+
+    def sync_model(self, new_order):
+        self._item.parameter.order(
+            lambda key: new_order.index(key) if key in new_order else -1
+        )
+
+
+@PropertyPages.register(sysml.ConstraintBlock)
+class ConstraintBlockExpressionsPage(PropertyPageBase):
+    """An editor for ConstraintBlock."""
+
+    order = 20
+
+    def __init__(self, subject):
+        super().__init__()
+        self.subject = subject
+        self.watcher = subject and subject.watcher()
+
+    def construct(self):
+        self.model = ConstraintExpressions(self.subject)
+
+        builder = new_builder(
+            "constraintblock-expressions-editor",
+            signals={
+                "edited": (on_text_cell_edited, self.model, 0),
+            },
+        )
+
+        tree_view: Gtk.TreeView = builder.get_object("list")
+        tree_view.set_model(self.model)
+        controller = Gtk.EventControllerKey.new()
+        tree_view.add_controller(controller)
+        controller.connect("key-pressed", on_keypress_event, tree_view)
+
+        return unsubscribe_all_on_destroy(
+            builder.get_object("constraintblock-expressions-editor"), self.watcher
+        )
+
+
+@PropertyPages.register(sysml.ConstraintBlock)
+class ConstraintBlockParametersPage(PropertyPageBase):
+    """An editor for ConstraintBlock."""
+
+    order = 30
+
+    def __init__(self, subject):
+        super().__init__()
+        self.subject = subject
+        self.watcher = subject and subject.watcher()
+
+    def construct(self):
+        self.model = ConstraintParameters(self.subject)
+
+        builder = new_builder(
+            "constraintblock-parameters-editor",
+            signals={
+                "edited": (on_text_cell_edited, self.model, 0),
+            },
+        )
+
+        tree_view: Gtk.TreeView = builder.get_object("list")
+        tree_view.set_model(self.model)
+        controller = Gtk.EventControllerKey.new()
+        tree_view.add_controller(controller)
+        controller.connect("key-pressed", on_keypress_event, tree_view)
+
+        return unsubscribe_all_on_destroy(
+            builder.get_object("constraintblock-parameters-editor"), self.watcher
+        )
 
 
 @PropertyPages.register(sysml.Property)

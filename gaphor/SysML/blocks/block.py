@@ -15,7 +15,7 @@ from gaphor.diagram.shapes import (
 )
 from gaphor.diagram.support import represents
 from gaphor.diagram.text import FontStyle, FontWeight
-from gaphor.SysML.sysml import Block, ValueType
+from gaphor.SysML.sysml import Block, ConstraintBlock, ValueType
 from gaphor.UML.classes.klass import attributes_compartment, operation_watches
 from gaphor.UML.classes.stereotype import stereotype_compartments, stereotype_watches
 from gaphor.UML.recipes import stereotypes_str
@@ -28,12 +28,12 @@ class BlockItem(Classified, ElementPresentation[Block]):
         super().__init__(diagram, id)
 
         self.watch("show_stereotypes", self.update_shapes).watch(
-            "show_parts", self.update_shapes
-        ).watch("show_references", self.update_shapes).watch(
-            "show_values", self.update_shapes
-        ).watch("show_operations", self.update_shapes).watch(
-            "subject[NamedElement].name"
-        ).watch("subject[NamedElement].name").watch(
+            "show_constraints", self.update_shapes
+        ).watch("show_parts", self.update_shapes).watch(
+            "show_references", self.update_shapes
+        ).watch("show_values", self.update_shapes).watch(
+            "show_operations", self.update_shapes
+        ).watch("subject[NamedElement].name").watch("subject[NamedElement].name").watch(
             "subject[NamedElement].namespace.name"
         ).watch("subject[Classifier].isAbstract", self.update_shapes).watch(
             "subject[Class].ownedAttribute.aggregation", self.update_shapes
@@ -42,6 +42,8 @@ class BlockItem(Classified, ElementPresentation[Block]):
         stereotype_watches(self)
 
     show_stereotypes: attribute[int] = attribute("show_stereotypes", int)
+
+    show_constraints: attribute[int] = attribute("show_constraints", int, default=False)
 
     show_parts: attribute[int] = attribute("show_parts", int, default=False)
 
@@ -91,12 +93,31 @@ class BlockItem(Classified, ElementPresentation[Block]):
                 },
             ),
             *(
+                self.show_constraints
+                and self.subject
+                and [
+                    self.block_compartment(
+                        self.diagram.gettext("constraints"),
+                        lambda a: isinstance(a.type, ConstraintBlock),
+                    )
+                ]
+                or []
+            ),
+            *(
                 self.show_parts
                 and self.subject
                 and [
                     self.block_compartment(
                         self.diagram.gettext("parts"),
-                        lambda a: a.aggregation and a.aggregation == "composite",
+                        lambda a: a.aggregation
+                        and a.aggregation == "composite"
+                        and not isinstance(
+                            a.type,
+                            (
+                                ConstraintBlock,
+                                ValueType,
+                            ),
+                        ),
                     )
                 ]
                 or []
@@ -107,7 +128,9 @@ class BlockItem(Classified, ElementPresentation[Block]):
                 and [
                     self.block_compartment(
                         self.diagram.gettext("references"),
-                        lambda a: a.aggregation and a.aggregation == "shared",
+                        lambda a: a.aggregation
+                        and a.aggregation == "shared"
+                        and not isinstance(a.type, (ConstraintBlock,)),
                     )
                 ]
                 or []

@@ -47,6 +47,18 @@ blocks = ToolSection(
             handle_index=SE,
         ),
         ToolDef(
+            "toolbox-constraintblock",
+            gettext("ConstraintBlock"),
+            "gaphor-constraint-block-symbolic",
+            None,
+            new_item_factory(
+                sysml_items.ConstraintBlockItem,
+                sysml.ConstraintBlock,
+                config_func=namespace_config,
+            ),
+            handle_index=SE,
+        ),
+        ToolDef(
             "toolbox-package",
             gettext("Package"),
             "gaphor-package-symbolic",
