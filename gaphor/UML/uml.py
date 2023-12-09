@@ -781,6 +781,14 @@ class ValueSpecificationAction(Action):
     value: _attribute[str] = _attribute("value", str)
 
 
+class Signal(Classifier):
+    ownedAttribute: relation_many[Property]
+
+
+class Reception(BehavioralFeature):
+    signal: relation_one[Signal]
+
+
 # 86: override Lifeline.parse: Callable[[Lifeline, str], None]
 # defined in umloverrides.py
 
@@ -1332,3 +1340,7 @@ DirectedRelationship.target.add(InformationFlow.informationTarget)  # type: igno
 CallAction.result = association("result", OutputPin, composite=True)
 CallBehaviorAction.behavior = association("behavior", Behavior, upper=1, composite=True)
 ValueSpecificationAction.result = association("result", OutputPin, upper=1, composite=True)
+Signal.ownedAttribute = association("ownedAttribute", Property, composite=True)
+Classifier.attribute.add(Signal.ownedAttribute)  # type: ignore[attr-defined]
+Namespace.ownedMember.add(Signal.ownedAttribute)  # type: ignore[attr-defined]
+Reception.signal = association("signal", Signal, upper=1)
